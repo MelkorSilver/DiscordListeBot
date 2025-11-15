@@ -80,4 +80,4 @@ client.on(Events.MessageCreate, async (msg) => {
   }
 });
 
-client.login("MTQzOTAyMzU5NDQ1NzAxMDM0OA.GS-NiJ.oZahY43tq4golV2cOdwJWdweQrchtsVltagUpc");
+client.login(process.env.TOKEN);

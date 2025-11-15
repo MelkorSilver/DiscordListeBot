@@ -1,8 +1,22 @@
 require("dotenv").config();
 const { Client, GatewayIntentBits, Partials, Events } = require("discord.js");
+const fs = require("fs");
 
-let listChannelId = process.env.LIST_CHANNEL_ID || null;
-let listMessageId = process.env.LIST_MESSAGE_ID || null;
+const CONFIG_FILE = "./config.json";
+
+function loadConfig() {
+  try {
+    return JSON.parse(fs.readFileSync(CONFIG_FILE, "utf8"));
+  } catch {
+    return { listChannelId: null, listMessageId: null };
+  }
+}
+
+function saveConfig(data) {
+  fs.writeFileSync(CONFIG_FILE, JSON.stringify(data, null, 2), "utf8");
+}
+
+let config = loadConfig();
 
 const client = new Client({
   intents: [
@@ -30,11 +44,10 @@ client.on(Events.MessageCreate, async (msg) => {
       return msg.reply("Bu komutu **liste mesajına cevap atarak** kullanmalısın.");
     }
 
-    listChannelId = msg.channel.id;
-    listMessageId = msg.reference.messageId;
+    config.listChannelId = msg.channel.id;
+    config.listMessageId = msg.reference.messageId;
 
-    // 🔥 Railway’e env olarak kaydet
-    console.log("Yeni liste kaydedildi:", listChannelId, listMessageId);
+    saveConfig(config);
 
     return msg.reply("✅ Liste mesajı kaydedildi!");
   }
@@ -43,13 +56,13 @@ client.on(Events.MessageCreate, async (msg) => {
   // Kullanıcı sadece sayı yazdı mı?
   // -----------------
   if (/^\d+$/.test(content)) {
-    if (!listChannelId || !listMessageId) return;
+    if (!config.listChannelId || !config.listMessageId) return;
 
     const num = parseInt(content);
-    const listChannel = await client.channels.fetch(listChannelId).catch(() => null);
+    const listChannel = await client.channels.fetch(config.listChannelId).catch(() => null);
     if (!listChannel) return;
 
-    const listMessage = await listChannel.messages.fetch(listMessageId).catch(() => null);
+    const listMessage = await listChannel.messages.fetch(config.listMessageId).catch(() => null);
     if (!listMessage) return;
 
     let lines = listMessage.content.split("\n");

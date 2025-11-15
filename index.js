@@ -1,22 +1,5 @@
 require("dotenv").config();
 const { Client, GatewayIntentBits, Partials, Events } = require("discord.js");
-const fs = require("fs");
-
-const CONFIG_FILE = "./config.json";
-
-function loadConfig() {
-  try {
-    return JSON.parse(fs.readFileSync(CONFIG_FILE, "utf8"));
-  } catch {
-    return { listChannelId: null, listMessageId: null };
-  }
-}
-
-function saveConfig(data) {
-  fs.writeFileSync(CONFIG_FILE, JSON.stringify(data, null, 2), "utf8");
-}
-
-let config = loadConfig();
 
 const client = new Client({
   intents: [
@@ -27,57 +10,59 @@ const client = new Client({
   partials: [Partials.Message, Partials.Channel]
 });
 
+// ENV’de saklıyoruz
+let listChannelId = process.env.LIST_CHANNEL_ID || null;
+let listMessageId = process.env.LIST_MESSAGE_ID || null;
+
 client.once(Events.ClientReady, () => {
   console.log(`Bot giriş yaptı: ${client.user.tag}`);
 });
 
+// LISTE AYARLAMA
 client.on(Events.MessageCreate, async (msg) => {
   if (msg.author.bot) return;
 
   const content = msg.content.trim();
 
-  // -----------------
-  // Listeyi ayarlama
-  // -----------------
   if (content === "!liste-ayarla") {
     if (!msg.reference?.messageId) {
       return msg.reply("Bu komutu **liste mesajına cevap atarak** kullanmalısın.");
     }
 
-    config.listChannelId = msg.channel.id;
-    config.listMessageId = msg.reference.messageId;
+    listChannelId = msg.channel.id;
+    listMessageId = msg.reference.messageId;
 
-    saveConfig(config);
+    console.log("Liste kaydedildi:", listChannelId, listMessageId);
 
     return msg.reply("✅ Liste mesajı kaydedildi!");
   }
 
-  // -----------------
-  // Kullanıcı sadece sayı yazdı mı?
-  // -----------------
+  // SAYI YAZANLARI OKUMA
   if (/^\d+$/.test(content)) {
-    if (!config.listChannelId || !config.listMessageId) return;
+    if (!listChannelId || !listMessageId) return;
 
     const num = parseInt(content);
-    const listChannel = await client.channels.fetch(config.listChannelId).catch(() => null);
+
+    const listChannel = await client.channels.fetch(listChannelId).catch(() => null);
     if (!listChannel) return;
 
-    const listMessage = await listChannel.messages.fetch(config.listMessageId).catch(() => null);
+    const listMessage = await listChannel.messages.fetch(listMessageId).catch(() => null);
     if (!listMessage) return;
 
     let lines = listMessage.content.split("\n");
-    const lineIndex = lines.findIndex(l => l.trim().startsWith(`${num})`));
 
+    const lineIndex = lines.findIndex(l => l.trim().startsWith(`${num})`));
     if (lineIndex === -1) return;
 
-    // Eski mention'u temizle
+    // Eski mention temizle
     lines[lineIndex] = lines[lineIndex].replace(/–\s*<@!?\d+>/, "");
 
-    // Yeni mention'u ekle
+    // Yeni mention ekle
     lines[lineIndex] = `${lines[lineIndex]} – <@${msg.author.id}>`;
 
     await listMessage.edit(lines.join("\n"));
   }
 });
 
+// Bot login
 client.login(process.env.TOKEN);

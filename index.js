@@ -80,4 +80,9 @@ client.on(Events.MessageCreate, async (msg) => {
   }
 });
 
-client.login(process.env.TOKEN);
+const { Client } = require("discord.js");
+const client = new Client({ intents: [] });
+
+client.login("BURAYA_TOKENI_YAPISTIR")
+  .then(() => console.log("TOKEN GEÇERLİ ✔"))
+  .catch(err => console.log("TOKEN HATALI ❌:", err));

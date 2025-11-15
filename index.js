@@ -1,22 +1,8 @@
 require("dotenv").config();
 const { Client, GatewayIntentBits, Partials, Events } = require("discord.js");
-const fs = require("fs");
 
-const CONFIG_FILE = "./config.json";
-
-function loadConfig() {
-  try {
-    return JSON.parse(fs.readFileSync(CONFIG_FILE, "utf8"));
-  } catch {
-    return { listChannelId: null, listMessageId: null };
-  }
-}
-
-function saveConfig(data) {
-  fs.writeFileSync(CONFIG_FILE, JSON.stringify(data, null, 2), "utf8");
-}
-
-let config = loadConfig();
+let listChannelId = process.env.LIST_CHANNEL_ID || null;
+let listMessageId = process.env.LIST_MESSAGE_ID || null;
 
 const client = new Client({
   intents: [
@@ -44,10 +30,11 @@ client.on(Events.MessageCreate, async (msg) => {
       return msg.reply("Bu komutu **liste mesajına cevap atarak** kullanmalısın.");
     }
 
-    config.listChannelId = msg.channel.id;
-    config.listMessageId = msg.reference.messageId;
+    listChannelId = msg.channel.id;
+    listMessageId = msg.reference.messageId;
 
-    saveConfig(config);
+    // 🔥 Railway’e env olarak kaydet
+    console.log("Yeni liste kaydedildi:", listChannelId, listMessageId);
 
     return msg.reply("✅ Liste mesajı kaydedildi!");
   }
@@ -56,13 +43,13 @@ client.on(Events.MessageCreate, async (msg) => {
   // Kullanıcı sadece sayı yazdı mı?
   // -----------------
   if (/^\d+$/.test(content)) {
-    if (!config.listChannelId || !config.listMessageId) return;
+    if (!listChannelId || !listMessageId) return;
 
     const num = parseInt(content);
-    const listChannel = await client.channels.fetch(config.listChannelId).catch(() => null);
+    const listChannel = await client.channels.fetch(listChannelId).catch(() => null);
     if (!listChannel) return;
 
-    const listMessage = await listChannel.messages.fetch(config.listMessageId).catch(() => null);
+    const listMessage = await listChannel.messages.fetch(listMessageId).catch(() => null);
     if (!listMessage) return;
 
     let lines = listMessage.content.split("\n");
@@ -80,9 +67,4 @@ client.on(Events.MessageCreate, async (msg) => {
   }
 });
 
-const { Client } = require("discord.js");
-const client = new Client({ intents: [] });
-
-client.login("BURAYA_TOKENI_YAPISTIR")
-  .then(() => console.log("TOKEN GEÇERLİ ✔"))
-  .catch(err => console.log("TOKEN HATALI ❌:", err));
+client.login(process.env.TOKEN);
